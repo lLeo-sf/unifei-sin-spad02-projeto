@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RESCUEGROUPS.ORG - Ad Hoc </title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background-color: #3a3a3a;
+            color: white;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+        }
+        .header-right {
+            display: flex;
+        }
+        .header-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            margin-left: 15px;
+        }
+        .main-container {
+            display: flex;
+            height: calc(100vh - 50px);
+        }
+        .left-panel {
+            width: 220px;
+            background-color: #f0f0f0;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+        }
+        .center-panel {
+            flex-grow: 1;
+            padding: 10px;
+            background-color: white;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .right-panel {
+            width: 250px;
+            background-color: #f0f0f0;
+            border-left: 1px solid #ddd;
+            overflow-y: auto;
+        }
+        .panel-title {
+            background-color: #4b89dc;
+            color: white;
+            padding: 8px;
+            font-weight: bold;
+            margin: 0;
+        }
+        .section-header {
+            background-color: #e6e6e6;
+            padding: 5px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .section-header:hover {
+            background-color: #d9d9d9;
+        }
+        .field-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        .field-item {
+            padding: 5px 5px 5px 25px;
+            border-bottom: 1px solid #eee;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+        }
+        .field-item:hover {
+            background-color: #f1f1f1;
+        }
+        .field-icon {
+            margin-right: 5px;
+            color: #666;
+        }
+        .toolbar {
+            background-color: #f9f9f9;
+            padding: 5px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+        }
+        .toolbar button, .toolbar select {
+            margin-right: 5px;
+            padding: 3px 8px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .toolbar button:hover {
+            background-color: #e0e0e0;
+        }
+        .report-title {
+            padding: 5px;
+            margin: 10px 0;
+            font-size: 14px;
+            font-weight: bold;
+            color: #4b89dc;
+        }
+        .report-sections {
+            margin-bottom: 10px;
+        }
+        .report-section {
+            margin-bottom: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .section-title {
+            background-color: #f0f0f0;
+            padding: 5px;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+        }
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .result-table th, .result-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .result-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .result-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .result-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        .filter-section {
+            padding: 10px;
+        }
+        .filter-item {
+            margin-bottom: 10px;
+            background-color: white;
+            padding: 8px;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+        }
+        .filter-item h4 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            color: #4b89dc;
+        }
+        .filter-values {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .filter-value {
+            padding: 3px 0;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+        }
+        .checkbox-label input {
+            margin-right: 5px;
+        }
+        .status-bar {
+            padding: 5px;
+            background-color: #f0f0f0;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+            margin-top: auto;
+        }
+        .column-header {
+            cursor: pointer;
+            position: relative;
+        }
+        .column-header:hover::after {
+            content: "⇕";
+            position: absolute;
+            right: 5px;
+        }
+        .drag-over {
+            border: 2px dashed #4b89dc;
+            background-color: #f0f7ff;
+        }
+        .report-section-columns,
+        .report-section-groups {
+            padding: 8px;
+            min-height: 30px;
+            border-bottom: 1px solid #ddd;
+        }
+        .field-pill {
+            display: inline-flex;
+            align-items: center;
+            background-color: #e7f0fd;
+            border: 1px solid #aac8f9;
+            border-radius: 3px;
+            padding: 2px 8px;
+            margin: 2px;
+            font-size: 12px;
+        }
+        .field-pill::after {
+            content: "×";
+            margin-left: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .topic-header {
+            padding: 5px;
+            background-color: #f9f9f9;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+        }
+        .topic-title {
+            font-size: 14px;
+            color: #666;
+            margin-right: 10px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>RESCUEGROUPS.ORG Ad Hoc Reporting</h1>
+        <div class="header-right">
+            <button class="header-button">⚙️</button>
+            <button class="header-button">🏠</button>
+        </div>
+    </div>
+
+    <div class="topic-header">
+        <span class="topic-title">Topico: Adoção de Animais</span>
+        <button onclick="showNewReportView()">Nova View</button>
+    </div>
+
+    <div class="main-container">
+        <div class="left-panel">
+            <div class="section-header" onclick="toggleSection('fields-section')">
+                <span>Fields</span>
+                <span>≡</span>
+            </div>
+            <div id="fields-section">
+                <ul class="field-list">
+                    <li class="field-item" draggable="true" ondragstart="drag(event, 'Animals.id')">
+                        <span class="field-icon">📊</span> Animals.id
+                    </li>
+                    <li class="field-item" draggable="true" ondragstart="drag(event, 'Animals.name')">
+                        <span class="field-icon">📊</span> Animals.name
+                    </li>
+                    <li class="field-item" draggable="true" ondragstart="drag(event, 'Animals.sex')">
+                        <span class="field-icon">📊</span> Animals.sex
+                    </li>
+                    <li class="field-item" draggable="true" ondragstart="drag(event, 'Animals.ageGroup')">
+                        <span class="field-icon">📊</span> Animals.ageGroup
+                    </li>
+                    <li class="field-item" draggable="true" ondragstart="drag(event, 'Animals.breedString')">
+                        <span class="field-icon">📊</span> Animals.breedString
+                    </li>
+                    <li class="field-item" draggable="true" ondragstart="drag(event, 'Animals.speciesId')">
+                        <span class="field-icon">📊</span> Animals.speciesId
+                    </li>
+                    <li class="field-item" draggable="true" ondragstart="drag(event, 'Animals.statusId')">
+                        <span class="field-icon">📊</span> Animals.statusId
+                    </li>
+                    <li class="field-item" draggable="true" ondragstart="drag(event, 'Animals.adoptionFeeString')">
+                        <span class="field-icon">📊</span> Animals.adoptionFeeString
+                    </li>
+                </ul>
+
+                <div class="section-header" onclick="toggleSection('organizations-section')">
+                    <span>Organizations</span>
+                    <span>≡</span>
+                </div>
+                <div id="organizations-section">
+                    <ul class="field-list">
+                        <li class="field-item" draggable="true" ondragstart="drag(event, 'Organizations.id')">
+                            <span class="field-icon">📊</span> Organizations.id
+                        </li>
+                        <li class="field-item" draggable="true" ondragstart="drag(event, 'Organizations.name')">
+                            <span class="field-icon">📊</span> Organizations.name
+                        </li>
+                        <li class="field-item" draggable="true" ondragstart="drag(event, 'Organizations.city')">
+                            <span class="field-icon">📊</span> Organizations.city
+                        </li>
+                        <li class="field-item" draggable="true" ondragstart="drag(event, 'Organizations.state')">
+                            <span class="field-icon">📊</span> Organizations.state
+                        </li>
+                        <li class="field-item" draggable="true" ondragstart="drag(event, 'Organizations.phone')">
+                            <span class="field-icon">📊</span> Organizations.phone
+                        </li>
+                        <li class="field-item" draggable="true" ondragstart="drag(event, 'Organizations.email')">
+                            <span class="field-icon">📊</span> Organizations.email
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="section-header" onclick="toggleSection('measures-section')">
+                    <span>Medidas</span>
+                    <span>≡</span>
+                </div>
+                <div id="measures-section">
+                    <ul class="field-list">
+                        <li class="field-item" draggable="true" ondragstart="drag(event, 'COUNT')">
+                            <span class="field-icon">📈</span> COUNT
+                        </li>
+                        <li class="field-item" draggable="true" ondragstart="drag(event, 'SUM')">
+                            <span class="field-icon">📈</span> SUM
+                        </li>
+                        <li class="field-item" draggable="true" ondragstart="drag(event, 'AVG')">
+                            <span class="field-icon">📈</span> AVG
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="center-panel">
+            <div class="toolbar">
+                <button title="Run Report">▶️</button>
+                <button title="Export to Excel">📊</button>
+                <button title="Export to PDF">📄</button>
+                <button title="Export to CSV">📁</button>
+                <button title="Print">🖨️</button>
+                <select>
+                    <option>Table</option>
+                    <option>Pivot</option>
+                </select>
+                <select>
+                    <option>Full Data</option>
+                    <option>Summary</option>
+                </select>
+            </div>
+
+            <div class="report-sections">
+                <div class="report-section">
+                    <div class="section-title">Colunas</div>
+                    <div class="report-section-columns" id="columns-area" 
+                         ondrop="drop(event, 'columns')" 
+                         ondragover="allowDrop(event)" 
+                         ondragleave="dragLeave(event)">
+                        
+                    </div>
+                </div>
+                
+                <div class="report-section">
+                    <div class="section-title">Agrupamentos</div>
+                    <div class="report-section-groups" id="groups-area" 
+                         ondrop="drop(event, 'groups')" 
+                         ondragover="allowDrop(event)" 
+                         ondragleave="dragLeave(event)">
+                       
+                    </div>
+                </div>
+            </div>
+
+            <div class="report-title">Relatório de Animais para Adoção</div>
+
+            <table class="result-table">
+                <thead>
+                    <tr>
+                        <th class="column-header">Nome do Animal</th>
+                        <th class="column-header">Sexo</th>
+                        <th class="column-header">Faixa Etária</th>
+                        <th class="column-header">Nome da Organização</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Rex</td>
+                        <td>Macho</td>
+                        <td>Adulto</td>
+                        <td>Abrigo Amigo dos Animais</td>
+                    </tr>
+                    <tr>
+                        <td>Luna</td>
+                        <td>Fêmea</td>
+                        <td>Filhote</td>
+                        <td>Proteção Animal</td>
+                    </tr>
+                    <tr>
+                        <td>Bob</td>
+                        <td>Macho</td>
+                        <td>Idoso</td>
+                        <td>Abrigo Amigo dos Animais</td>
+                    </tr>
+                    <tr>
+                        <td>Nina</td>
+                        <td>Fêmea</td>
+                        <td>Jovem</td>
+                        <td>Proteção Animal</td>
+                    </tr>
+                    <tr>
+                        <td>Thor</td>
+                        <td>Macho</td>
+                        <td>Adulto</td>
+                        <td>Abrigo Amigo dos Animais</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="status-bar">
+                5 registros encontrados | Última atualização: 06/05/2025 14:30
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="section-header">
+                <span>Filters</span>
+                <span>≡</span>
+            </div>
+            <div class="filter-section">
+                <div class="filter-item">
+                    <h4>Species</h4>
+                    <div class="filter-values">
+                        <div class="filter-value">
+                            <label class="checkbox-label">
+                                <input type="checkbox" checked> Cachorro
+                            </label>
+                        </div>
+                        <div class="filter-value">
+                            <label class="checkbox-label">
+                                <input type="checkbox" checked> Gato
+                            </label>
+                        </div>
+                        <div class="filter-value">
+                            <label class="checkbox-label">
+                                <input type="checkbox"> Coelho
+                            </label>
+                        </div>
+                        <div class="filter-value">
+                            <label class="checkbox-label">
+                                <input type="checkbox"> Outros
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="filter-item">
+                    <h4>Status</h4>
+                    <div class="filter-values">
+                        <div class="filter-value">
+                            <label class="checkbox-label">
+                                <input type="checkbox" checked> Disponível
+                            </label>
+                        </div>
+                        <div class="filter-value">
+                            <label class="checkbox-label">
+                                <input type="checkbox"> Adotado
+                            </label>
+                        </div>
+                        <div class="filter-value">
+                            <label class="checkbox-label">
+                                <input type="checkbox"> Pendente
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="filter-item">
+                    <h4>Faixa Etária</h4>
+                    <div class="filter-values">
+                        <div class="filter-value">
+                            <label class="checkbox-label">
+                                <input type="checkbox" checked> Filhote
+                            </label>
+                        </div>
+                        <div class="filter-value">
+                            <label class="checkbox-label">
+                                <input type="checkbox" checked> Jovem
+                            </label>
+                        </div>
+                        <div class="filter-value">
+                            <label class="checkbox-label">
+                                <input type="checkbox" checked> Adulto
+                            </label>
+                        </div>
+                        <div class="filter-value">
+                            <label class="checkbox-label">
+                                <input type="checkbox" checked> Idoso
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            section.classList.toggle('hidden');
+        }
+        
+        function drag(event, fieldId) {
+            event.dataTransfer.setData("text", fieldId);
+        }
+        
+        function allowDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('drag-over');
+        }
+        
+        function dragLeave(event) {
+            event.currentTarget.classList.remove('drag-over');
+        }
+        
+        function drop(event, area) {
+            event.preventDefault();
+            const fieldId = event.dataTransfer.getData("text");
+            const dropArea = document.getElementById(area + '-area');
+            
+            const fieldPill = document.createElement('div');
+            fieldPill.className = 'field-pill';
+            fieldPill.textContent = fieldId;
+            fieldPill.onclick = function() { this.remove(); };
+            
+            dropArea.appendChild(fieldPill);
+            dropArea.classList.remove('drag-over');
+            
+            console.log(`Added ${fieldId} to ${area}`);
+        }
+        
+        function showNewReportView() {
+            alert("Criar novo relatório ad hoc");
+        }
+    </script>
+</body>
