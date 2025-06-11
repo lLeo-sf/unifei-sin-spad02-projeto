@@ -70,7 +70,7 @@ export default function App() {
     const [columns, setColumns] = useState([]);
     const [grouping, setGrouping] = useState([]);
 
-    const measuresFields = ['COUNT', 'SUM', 'AVG'];
+    const measuresFields = ['COUNT', 'SUM', 'AVG', 'MAX', 'MIN'];
 
     useEffect(() => {
         const baseFields = tableFields[selectedTable].base.map(field => `${selectedTable}.${field}`);
