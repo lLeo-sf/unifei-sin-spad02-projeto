@@ -68,6 +68,9 @@ export default function App() {
     const [fields, setFields] = useState([]);
     const [filters, setFilters] = useState([]);
     const [columns, setColumns] = useState([]);
+    const [grouping, setGrouping] = useState([]);
+
+    const measuresFields = ['COUNT', 'SUM', 'AVG'];
 
     useEffect(() => {
         const baseFields = tableFields[selectedTable].base.map(field => `${selectedTable}.${field}`);
@@ -88,35 +91,71 @@ export default function App() {
             <div className="main-container">
                 <div className="left-panel">
                     <div className="panel-title">Tabelas</div>
-                    <select
-                        id="tableSelector"
-                        value={selectedTable}
-                        onChange={e => setSelectedTable(e.target.value)}
-                    >
-                        <option value="Animals">Animais</option>
-                        <option value="Colors">Cores</option>
-                        <option value="Organizations">Organizações</option>
-                    </select>
+                      <select
+                          id="tableSelector"
+                          value={selectedTable}
+                          onChange={e => setSelectedTable(e.target.value)}
+                      >
+                          <option value="Animals">Animais</option>
+                          <option value="Organizations">Organizações</option>
+                      </select>
 
-                    <div class="section-header" onclick="toggleSection('fields-section')">
-                        <span>Colunas</span>
-                        <span>≡</span>
+                      <div class="section-header" onclick="toggleSection('fields-section')">
+                          <span>Funções</span>
+                          <span>≡</span>
+                      </div>
+
+                      <ul id="dynamic-fields" className="field-list">
+                          {measuresFields.map(measure => (
+                              <FieldItem key={measure} fieldId={measure} icon="📈" />
+                          ))}
+                      </ul>
+
+
+                      <div class="section-header" onclick="toggleSection('fields-section')">
+                          <span>Colunas</span>
+                          <span>≡</span>
+                      </div>
+
+                      <ul id="dynamic-fields" className="field-list">
+                          {fields.map(field => (
+                              <FieldItem key={field} fieldId={field} />
+                          ))}
+                          {measuresFields.map(measure => (
+                              <FieldItem key={measure} fieldId={measure} icon="📈" />
+                          ))}
+                      </ul>
                     </div>
 
-                    <ul id="dynamic-fields" className="field-list">
-                        {fields.map(field => (
-                            <FieldItem key={field} fieldId={field} />
-                        ))}
-                    </ul>
-                </div>
 
                 <div className="center-panel">
                     <div className="report-sections">
                         <DropArea title="Colunas" fields={columns} setFields={setColumns} />
-                        <DropArea title="Agrupamentos" />
+                        <DropArea title="Agrupamentos" fields={grouping} setFields={setGrouping}/>
                     </div>
 
                     <div className="report-title">Relatório Ad Hoc</div>
+
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        alignItems: 'center',
+                        marginBottom: '10px'
+                    }}>
+                        <button
+                            style={{
+                                padding: '6px 12px',
+                                backgroundColor: '#4b89dc',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                            }}
+                            onClick={() => alert('Pesquisar clicado')}
+                        >
+                            🔍 Pesquisar
+                        </button>
+                    </div>
 
                     <table className="result-table">
                         <thead>
