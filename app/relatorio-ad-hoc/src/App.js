@@ -53,10 +53,6 @@ const tableFilters = {
         'Status',
         'Faixa Etária'
     ],
-    Colors: [
-        'Cor Primária',
-        'Cor Secundária'
-    ],
     Organizations: [
         'Estado',
         'Cidade'
@@ -72,6 +68,8 @@ export default function App() {
 
     const [columns, setColumns] = useState([]);
     const [grouping, setGrouping] = useState([]);
+
+    const [data, setData] = useState([{"Animals.name": "asdasd", "Animals.ageGroup": "taoskdiasjd"}])
 
     const measuresFields = ['COUNT', 'SUM', 'AVG', 'MAX', 'MIN'];
 
@@ -165,17 +163,19 @@ export default function App() {
                                 ))}
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                {columns.map(column => (
-                                    <td key={column}>Exemplo</td>
-                                ))}
-                            </tr>
+                       <tbody>
+                            {data.map((row, rowIndex) => (
+                                <tr key={rowIndex}>
+                                    {columns.map(column => (
+                                        <td key={column}>{row[column]}</td>
+                                    ))}
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
 
                     <div className="status-bar">
-                        5 registros encontrados | Última atualização: 06/05/2025 14:30
+                        {data.length} registros encontrados
                     </div>
                 </div>
 

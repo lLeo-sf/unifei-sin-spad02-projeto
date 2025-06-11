@@ -8,12 +8,7 @@ export default function FilterSection({ filters }) {
                     <div className="filter-values">
                         <div className="filter-value">
                             <label className="checkbox-label">
-                                <input type="checkbox" defaultChecked /> Exemplo 1
-                            </label>
-                        </div>
-                        <div className="filter-value">
-                            <label className="checkbox-label">
-                                <input type="checkbox" /> Exemplo 2
+                                <input type="text" />
                             </label>
                         </div>
                     </div>
