@@ -64,9 +64,12 @@ const tableFilters = {
 };
 
 export default function App() {
+    
     const [selectedTable, setSelectedTable] = useState('Animals');
+    
     const [fields, setFields] = useState([]);
     const [filters, setFilters] = useState([]);
+
     const [columns, setColumns] = useState([]);
     const [grouping, setGrouping] = useState([]);
 
@@ -120,9 +123,6 @@ export default function App() {
                       <ul id="dynamic-fields" className="field-list">
                           {fields.map(field => (
                               <FieldItem key={field} fieldId={field} />
-                          ))}
-                          {measuresFields.map(measure => (
-                              <FieldItem key={measure} fieldId={measure} icon="📈" />
                           ))}
                       </ul>
                     </div>
