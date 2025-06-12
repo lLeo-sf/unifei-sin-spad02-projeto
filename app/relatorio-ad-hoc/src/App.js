@@ -69,7 +69,10 @@ export default function App() {
     const [columns, setColumns] = useState([]);
     const [grouping, setGrouping] = useState([]);
 
-    const [data, setData] = useState([{"Animals.name": "asdasd", "Animals.ageGroup": "taoskdiasjd"}])
+    const [data, setData] = useState([
+        {"Animals.name": "Mel"},
+        {"Animals.name": "Luna"}
+    ])
 
     const measuresFields = ['COUNT', 'SUM', 'AVG', 'MAX', 'MIN'];
 
