@@ -16,3 +16,9 @@ CREATE INDEX idx_animals_organizationId ON Animals(organizationId);
 -- Índice na tabela Organizations por id (opcional, mas por segurança)
 CREATE INDEX idx_organizations_id ON Organizations(id);
 
+CREATE INDEX idx_statuses_name ON statuses(name);
+CREATE INDEX idx_animals_organizationid ON animals(organizationid);
+CREATE INDEX idx_animals_speciesid ON animals(speciesid);
+CREATE INDEX idx_animals_statusid ON animals(statusid);
+CREATE INDEX idx_animals_patternid ON animals(patternid);
+
