@@ -4,6 +4,7 @@ import DropArea from "./components/DropArea";
 import FilterSection from "./components/FilterSection";
 import "./index.css";
 import { getMetadata } from "./services/metadataService";
+import { search } from "./services/searchService";
 
 export default function App() {
   const [metadata, setMetadata] = useState({});
@@ -19,19 +20,60 @@ export default function App() {
 
   const measuresFields = ["COUNT", "SUM", "AVG", "MAX", "MIN"];
 
-  // Busca os metadados ao montar o componente
+  const pascalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  const handleSearch = async () => {
+    if (!selectedTable) return;
+
+    // 1) Só pega os campos de filtro que tenham pelo menos um valor
+    const payloadFilters = Object.fromEntries(
+      Object.entries(filters).filter(
+        ([, values]) => Array.isArray(values) && values.length > 0
+      )
+    );
+
+    // 2) Monta o body com o array de valores intacto
+    const body = {
+      table: selectedTable,
+      columns,
+      grouping,
+      filters: payloadFilters,
+    };
+
+    try {
+      // 3) Chama a API
+      const result = await search(body);
+
+      // 4) Se quiser normalizar chaves, faça aqui; caso contrário:
+      setData(result);
+    } catch (err) {
+      console.error("Erro ao buscar dados:", err);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       try {
-        const meta = await getMetadata();
-        setMetadata(meta);
+        const data = await getMetadata();
+
+        // transforma as keys de relations para PascalCase
+        const normalized = {};
+        Object.entries(data).forEach(([table, { base, relations }]) => {
+          const normRels = {};
+          Object.entries(relations || {}).forEach(([relTable, fields]) => {
+            const relName = pascalize(relTable);
+            normRels[relName] = fields;
+          });
+          normalized[table] = { base, relations: normRels };
+        });
+
+        setMetadata(normalized);
       } catch (err) {
         console.error("Falha ao buscar metadata:", err);
       }
     })();
   }, []);
 
-  // Atualiza campos e filtros quando a tabela selecionada ou os metadados mudam
   useEffect(() => {
     if (selectedTable && metadata[selectedTable]) {
       const baseFields = metadata[selectedTable].base.map(
@@ -121,7 +163,7 @@ export default function App() {
                 borderRadius: "4px",
                 cursor: "pointer",
               }}
-              onClick={() => alert("Pesquisar clicado")}
+              onClick={handleSearch}
             >
               🔍 Pesquisar
             </button>
@@ -156,7 +198,12 @@ export default function App() {
             <span>Filters</span>
             <span>≡</span>
           </div>
-          <FilterSection filters={filters} />
+          <FilterSection
+            filters={filters}
+            setFilters={setFilters}
+            metadata={metadata}
+            selectedTable={selectedTable}
+          />
         </div>
       </div>
     </div>
