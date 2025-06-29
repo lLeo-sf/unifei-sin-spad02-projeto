@@ -1,5 +1,5 @@
-from typing import List
-from sqlalchemy import Column, Float, ForeignKey, Integer, String, Tuple, create_engine
+from typing import Any, List, Dict
+from sqlalchemy import Boolean, Column, Date, Float, ForeignKey, Integer, String, Text, Tuple, create_engine, select
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from schemas import AdhocQueryRequest
@@ -7,115 +7,159 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm import sessionmaker
 
 DATABASE_URL = "postgresql://postgres:123qwe@localhost:5432/spad02"
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(bind=engine)
 
 Base = declarative_base()
 
 class Organization(Base):
-    __tablename__ = "Organizations"
-    id = Column(Integer, primary_key=True, index=True)
-    about = Column(String)
-    adoptionProcess = Column(String)
-    adoptionUrl = Column(String)
-    city = Column(String)
-    citystate = Column(String)
-    coordinates = Column(String)
-    country = Column(String)
-    distance = Column(String)
-    donationUrl = Column(String)
-    email = Column(String)
-    facebookUrl = Column(String)
-    fax = Column(String)
-    isCommonapplicationAccepted = Column(String)
+    __tablename__ = 'organizations'
+    id = Column(Integer, primary_key=True)
+    about = Column(Text)
+    adoptionProcess = Column(Text)
+    adoptionUrl = Column(Text)
+    city = Column(Text)
+    citystate = Column(Text)
+    coordinates = Column(Text)
+    country = Column(Text)
+    donationUrl = Column(Text)
+    email = Column(Text)
+    facebookUrl = Column(Text)
+    isCommonapplicationAccepted = Column(Boolean)
     lat = Column(Float)
     lon = Column(Float)
-    meetPets = Column(String)
-    name = Column(String)
-    phone = Column(String)
-    postcode = Column(String)
-    postcodePlus4 = Column(String)
-    serveAreas = Column(String)
-    services = Column(String)
-    sponsorshipUrl = Column(String)
-    state = Column(String)
-    street = Column(String)
-    type = Column(String)
-    url = Column(String)
+    name = Column(Text)
+    phone = Column(Text)
+    serveAreas = Column(Text)
+    services = Column(Text)
+    sponsorshipUrl = Column(Text)
+    state = Column(Text)
+    street = Column(Text)
+    type = Column(Text)
+    url = Column(Text)
+
+    animals = relationship('Animal', back_populates='organization')
 
 class Species(Base):
-    __tablename__ = "Species"
-    id = Column(Integer, primary_key=True, index=True)
-    plural = Column(String)
-    singular = Column(String)
-    youngPlural = Column(String)
-    youngSingular = Column(String)
+    __tablename__ = 'species'
+    id = Column(Integer, primary_key=True)
+    plural = Column(Text)
+    singular = Column(Text)
+    youngPlural = Column(Text)
+    youngSingular = Column(Text)
 
-class Status(Base):
-    __tablename__ = "Statuses"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String)
-    description = Column(String)
+    animals = relationship('Animal', back_populates='species')
 
 class Pattern(Base):
-    __tablename__ = "Patterns"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String)
+    __tablename__ = 'patterns'
+    id = Column(Integer, primary_key=True)
+    name = Column(Text)
+
+    animals = relationship('Animal', back_populates='pattern')
 
 class Breed(Base):
-    __tablename__ = "Breeds"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String)
+    __tablename__ = 'breeds'
+    id = Column(Integer, primary_key=True)
+    name = Column(Text)
 
-class AnimalPicture(Base):
-    __tablename__ = "AnimalPictures"
-    id = Column(Integer, primary_key=True, index=True)
-    animalId = Column(Integer)
-    size = Column(String)
-    url = Column(String)
+    animals_primary = relationship(
+        'Animal',
+        back_populates='breedPrimaryRel',
+        foreign_keys='Animal.breedPrimaryId'
+    )
+    animals_secondary = relationship(
+        'Animal',
+        back_populates='breedSecondaryRel',
+        foreign_keys='Animal.breedSecondaryId'
+    )
 
-class Contact(Base):
-    __tablename__ = "Contacts"
-    id = Column(Integer, primary_key=True, index=True)
-    animalId = Column(Integer)
-    address = Column(String)
-    city = Column(String)
-    state = Column(String)
-    postalcode = Column(String)
-    email = Column(String)
-    name = Column(String)
-    phone = Column(String)
+class Status(Base):
+    __tablename__ = 'statuses'
+    id = Column(Integer, primary_key=True)
+    name = Column(Text)
+    description = Column(Text)
+
+    animals = relationship('Animal', back_populates='status')
 
 class Location(Base):
-    __tablename__ = "Locations"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String)
-    address = Column(String)
-    city = Column(String)
-    state = Column(String)
-    postalcode = Column(String)
-    country = Column(String)
+    __tablename__ = 'locations'
+    id = Column(Integer, primary_key=True)
+    city = Column(Text)
+    citystate = Column(Text)
+    coordinates = Column(Text)
+    country = Column(Text)
     lat = Column(Float)
     lon = Column(Float)
+    name = Column(Text)
+    phone = Column(Text)
+    phoneExt = Column(Text)
+    postalCode = Column(Text)
+    postalCodePlus4 = Column(Text)
+    state = Column(Text)
+    street = Column(Text)
+    url = Column(Text)
 
 class Animal(Base):
-    __tablename__ = "Animals"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String)
-    speciesId = Column(Integer, ForeignKey("Species.id"))
-    breedPrimaryId = Column(Integer, ForeignKey("Breeds.id"))
-    breedSecondaryId = Column(Integer, ForeignKey("Breeds.id"))
-    patternId = Column(Integer, ForeignKey("Patterns.id"))
-    statusId = Column(Integer, ForeignKey("Statuses.id"))
-    organizationId = Column(Integer, ForeignKey("Organizations.id"))
+    __tablename__ = 'animals'
+    id = Column(Integer, primary_key=True)
+    name = Column(Text)
+    speciesId = Column(Integer, ForeignKey('species.id'))
+    breedPrimaryId = Column(Integer, ForeignKey('breeds.id'))
+    breedSecondaryId = Column(Integer, ForeignKey('breeds.id'))
+    patternId = Column(Integer, ForeignKey('patterns.id'))
+    statusId = Column(Integer, ForeignKey('statuses.id'))
+    organizationId = Column(Integer, ForeignKey('organizations.id'))
+    activityLevel = Column(Text)
+    adoptedDate = Column(Date)
+    ageGroup = Column(Text)
+    availableDate = Column(Date)
+    breedPrimary = Column(Text)
+    breedSecondary = Column(Text)
+    coatLength = Column(Text)
+    colorDetails = Column(Text)
+    createdDate = Column(Date)
+    energyLevel = Column(Text)
+    fenceNeeds = Column(Text)
+    foundDate = Column(Date)
+    foundPostalcode = Column(Text)
+    indoorOutdoor = Column(Text)
+    isAdoptionPending = Column(Boolean)
+    isBreedMixed = Column(Boolean)
+    isCatsOk = Column(Boolean)
+    isCurrentVaccinations = Column(Boolean)
+    isDogsOk = Column(Boolean)
+    isHousetrained = Column(Boolean)
+    isKidsOk = Column(Boolean)
+    isNeedingFoster = Column(Boolean)
+    isSpecialNeeds = Column(Boolean)
+    isSponsorable = Column(Boolean)
+    isYardRequired = Column(Boolean)
+    newPeopleReaction = Column(Text)
+    obedienceTraining = Column(Text)
+    priority = Column(Text)
+    rescueId = Column(Text)
+    sex = Column(Text)
+    sizeGroup = Column(Text)
+    specialNeedsDetails = Column(Text)
+    sponsorshipMinimum = Column(Text)
+    updatedDate = Column(Date)
 
-    species = relationship("Species")
-    breedPrimary = relationship("Breed", foreign_keys=[breedPrimaryId])
-    breedSecondary = relationship("Breed", foreign_keys=[breedSecondaryId])
-    pattern = relationship("Pattern")
-    status = relationship("Status")
-    organization = relationship("Organization")
-    
+    species = relationship('Species', back_populates='animals')
+    pattern = relationship('Pattern', back_populates='animals')
+    status = relationship('Status', back_populates='animals')
+    organization = relationship('Organization', back_populates='animals')
+    breedPrimaryRel = relationship(
+        'Breed',
+        back_populates='animals_primary',
+        foreign_keys=[breedPrimaryId]
+    )
+    breedSecondaryRel = relationship(
+        'Breed',
+        back_populates='animals_secondary',
+        foreign_keys=[breedSecondaryId]
+    )
+
+
 Base.metadata.create_all(bind=engine)
 
 ## ---- Adhoc Report Helpers ----
@@ -125,8 +169,6 @@ TABLE_MODELS = {
     "Statuses": Status,
     "Patterns": Pattern,
     "Breeds": Breed,
-    "AnimalPictures": AnimalPicture,
-    "Contacts": Contact,
     "Locations": Location,
     "Organizations": Organization
 }
@@ -137,78 +179,44 @@ def get_column(model, column_name):
     except AttributeError:
         raise ValueError(f"Column {column_name} not found in model {model.__name__}")
 
-def generate_dynamic_query(request_json: AdhocQueryRequest, db_session: Session) -> List[Tuple]:
-    
-    table_name = request_json.get("table")
-    columns = request_json.get("columns", [])
-    grouping = request_json.get("grouping", [])
-    filters = request_json.get("filters", {})
+def generate_dynamic_query(request: AdhocQueryRequest, db: Session) -> List[Dict[str, Any]]:
+    # Usa os atributos do Pydantic model em vez de .get()
+    table_name = request.table
+    columns = request.columns
+    grouping = request.grouping or []
+    filters = request.filters or {}
 
-    if table_name not in TABLE_MODELS:
-        raise ValueError(f"Unknown table: {table_name}")
+    Model = TABLE_MODELS[table_name]
+    stmt = select(*[])
 
-    base_model = TABLE_MODELS[table_name]
-
-    query = db_session.query()
-
-    orm_columns = []
-    joined_models = set()
+    # Monta colunas no select
+    select_expressions = []
     for col in columns:
-        tbl, colname = col.split(".")
-        model = TABLE_MODELS[tbl]
-        column_obj = get_column(model, colname)
-        orm_columns.append(column_obj)
+        tbl, field = col.split('.')
+        cls = TABLE_MODELS[tbl]
+        select_expressions.append(getattr(cls, field).label(col))
 
-        if model != base_model:
-            joined_models.add(model)
+    stmt = select(*select_expressions).select_from(Model)
 
-    group_by_columns = []
-    for grp in grouping:
-        tbl, colname = grp.split(".")
-        model = TABLE_MODELS[tbl]
-        column_obj = get_column(model, colname)
-        group_by_columns.append(column_obj)
+    # Aplica joins se necessário
+    for col in columns:
+        tbl, _ = col.split('.')
+        if tbl != table_name:
+            related_cls = TABLE_MODELS[tbl]
+            stmt = stmt.join(related_cls)
 
-        if model != base_model:
-            joined_models.add(model)
+    print(">>> request.filters:", request.filters)
 
-    query = db_session.query(*orm_columns)
+    # Aplica filtros
+    for col, vals in filters.items():
+        tbl, field = col.split('.')
+        cls = TABLE_MODELS[tbl]
+        stmt = stmt.where(getattr(cls, field).in_(vals))
 
-    # Faz os joins necessarios
-    from sqlalchemy.orm import joinedload
+    # Aplica agrupamento
+    if grouping:
+        group_expressions = [getattr(TABLE_MODELS[tbl], fld) for tbl, fld in (g.split('.') for g in grouping)]
+        stmt = stmt.group_by(*group_expressions)
 
-    for model in joined_models:
-        
-        relationship_name = None
-
-        for rel in base_model.__mapper__.relationships:
-            if rel.mapper.class_ == model:
-                relationship_name = rel.key
-                break
-
-        if relationship_name is None:
-            raise ValueError(f"Cannot determine relationship from {base_model.__name__} to {model.__name__}")
-
-        query = query.join(getattr(base_model, relationship_name))
-
-    # Aplica os filtros
-    from sqlalchemy import or_
-
-    for filter_field, filter_values in filters.items():
-        if filter_field not in TABLE_MODELS:
-            raise ValueError(f"Unknown filter table: {filter_field}")
-
-        model = TABLE_MODELS[filter_field]
-        column_obj = get_column(model, "name")
-        query = query.filter(column_obj.in_(filter_values))
-
-        if model != base_model:
-            joined_models.add(model)
-
-    # Group by se houver
-    if group_by_columns:
-        query = query.group_by(*group_by_columns)
-
-    results = query.all()
-
-    return results 
+    result = db.execute(stmt).mappings().all()
+    return [dict(row) for row in result]
