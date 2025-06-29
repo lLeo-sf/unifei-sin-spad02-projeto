@@ -5,12 +5,16 @@ from controller import router as report_router
 def create_app() -> FastAPI:
     app = FastAPI()
 
+    origins = [
+        "http://localhost:3000",  # porta padrão do React
+    ]
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_origins=origins,            # quais origens podem acessar
+        allow_credentials=True,           # libera credenciais (cookies, auth headers)
+        allow_methods=["*"],              # GET, POST, PUT...
+        allow_headers=["*"],              # Content-Type, Authorization...
     )
 
     app.include_router(report_router)
@@ -21,4 +25,4 @@ app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="localhost", port=8000, reload=True)
