@@ -7,72 +7,71 @@ import { getMetadata } from "./services/metadataService";
 import { search } from "./services/searchService";
 
 export default function App() {
+
   const [chartType, setChartType] = useState("bar");
   const [chartData, setChartData] = useState(null);
+
   const [metadata, setMetadata] = useState({});
+  
   const [selectedTable, setSelectedTable] = useState("");
+  
   const [fields, setFields] = useState([]);
   const [filters, setFilters] = useState([]);
   const [columns, setColumns] = useState([]);
   const [grouping, setGrouping] = useState([]);
-  const [data, setData] = useState([
-    { "Animals.name": "Mel" },
-    { "Animals.name": "Luna" },
-  ]);
+  
+  const [data, setData] = useState([]);
 
   const measuresFields = ["COUNT", "SUM", "AVG", "MAX", "MIN"];
 
   const pascalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
   const handleSearch = async () => {
-    if (!selectedTable) return;
+  if (!selectedTable) return;
 
-    // 1) só pega filtros com valores
-    const payloadFilters = Object.fromEntries(
-      Object.entries(filters).filter(
-        ([, vals]) => Array.isArray(vals) && vals.length > 0
-      )
-    );
+  // só pega filtros com valor preenchido
+  const payloadFilters = filters.filter(
+    f => f.value !== undefined && f.value !== ''
+  );
 
-    // 2) detecta se há uma função de agregação em columns
-    const fn = columns.find((c) => measuresFields.includes(c));
-
-    if (fn) {
-      // deve haver exatamente 1 coluna real
-      const realCols = columns.filter((c) => !measuresFields.includes(c));
-      if (realCols.length !== 1) {
-        alert("Para usar agregação: 1 função e 1 coluna apenas.");
-        return;
-      }
-      // monta só aggregations
-      const body = {
-        table: selectedTable,
-        filters: payloadFilters,
-        grouping, // mantém agrupamentos se houver
-        aggregations: [{ function: fn.toLowerCase(), field: realCols[0] }],
-      };
-      try {
-        const result = await search(body);
-        setData(result);
-      } catch (err) {
-        console.error("Erro ao buscar dados:", err);
-      }
-    } else {
-      // fluxo normal sem agregação
-      const body = {
-        table: selectedTable,
-        columns,
-        grouping,
-        filters: payloadFilters,
-      };
-      try {
-        const result = await search(body);
-        setData(result);
-      } catch (err) {
-        console.error("Erro ao buscar dados:", err);
-      }
+  // detecta agregação em columns
+  const fn = columns.find(c => measuresFields.includes(c));
+  if (fn) {
+    const realCols = columns.filter(c => !measuresFields.includes(c));
+    if (realCols.length !== 1) {
+      alert("Para usar agregação: 1 função e 1 coluna apenas.");
+      return;
     }
-  };
+    const body = {
+      table:        selectedTable,
+      filters:      payloadFilters,
+      grouping,     // mantém agrupamentos
+      aggregations: [{ function: fn.toLowerCase(), field: realCols[0] }]
+    };
+    try {
+      const result = await search(body);
+      setData(result);
+    } catch (err) {
+      console.error("Erro ao buscar dados:", err);
+    }
+  } else {
+    // fluxo normal
+    const body = {
+      table:    selectedTable,
+      columns,
+      grouping,
+      filters:  payloadFilters
+    };
+    try {
+      const result = await search(body);
+      setData(result);
+    } catch (err) {
+      console.error("Erro ao buscar dados:", err);
+      alert("Erro, verifique a montagem.");
+    }
+  }
+};
+
 
   useEffect(() => {
     (async () => {
@@ -235,7 +234,7 @@ export default function App() {
 
         <div className="right-panel">
           <div className="section-header">
-            <span>Filters</span>
+            <span>Filtros</span>
             <span>≡</span>
           </div>
           <FilterSection
