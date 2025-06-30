@@ -7,13 +7,13 @@ import { getMetadata } from "./services/metadataService";
 import { search } from "./services/searchService";
 
 export default function App() {
-  const [metadata, setMetadata] = useState({});
+  const [metadata, setMetadata]         = useState({});
   const [selectedTable, setSelectedTable] = useState("");
-  const [fields, setFields] = useState([]);
-  const [filters, setFilters] = useState([]);
-  const [columns, setColumns] = useState([]);
-  const [grouping, setGrouping] = useState([]);
-  const [data, setData] = useState([
+  const [fields, setFields]             = useState([]);
+  const [filters, setFilters]           = useState([]);
+  const [columns, setColumns]           = useState([]);
+  const [grouping, setGrouping]         = useState([]);
+  const [data, setData]                 = useState([
     { "Animals.name": "Mel" },
     { "Animals.name": "Luna" },
   ]);
@@ -25,29 +25,50 @@ export default function App() {
   const handleSearch = async () => {
     if (!selectedTable) return;
 
-    // 1) Só pega os campos de filtro que tenham pelo menos um valor
+    // 1) só pega filtros com valores
     const payloadFilters = Object.fromEntries(
       Object.entries(filters).filter(
-        ([, values]) => Array.isArray(values) && values.length > 0
+        ([, vals]) => Array.isArray(vals) && vals.length > 0
       )
     );
 
-    // 2) Monta o body com o array de valores intacto
-    const body = {
-      table: selectedTable,
-      columns,
-      grouping,
-      filters: payloadFilters,
-    };
+    // 2) detecta se há uma função de agregação em columns
+    const fn = columns.find((c) => measuresFields.includes(c));
 
-    try {
-      // 3) Chama a API
-      const result = await search(body);
-
-      // 4) Se quiser normalizar chaves, faça aqui; caso contrário:
-      setData(result);
-    } catch (err) {
-      console.error("Erro ao buscar dados:", err);
+    if (fn) {
+      // deve haver exatamente 1 coluna real
+      const realCols = columns.filter((c) => !measuresFields.includes(c));
+      if (realCols.length !== 1) {
+        alert("Para usar agregação: 1 função e 1 coluna apenas.");
+        return;
+      }
+      // monta só aggregations
+      const body = {
+        table:        selectedTable,
+        filters:      payloadFilters,
+        grouping,     // mantém agrupamentos se houver
+        aggregations: [{ function: fn.toLowerCase(), field: realCols[0] }],
+      };
+      try {
+        const result = await search(body);
+        setData(result);
+      } catch (err) {
+        console.error("Erro ao buscar dados:", err);
+      }
+    } else {
+      // fluxo normal sem agregação
+      const body = {
+        table:    selectedTable,
+        columns,
+        grouping,
+        filters:  payloadFilters,
+      };
+      try {
+        const result = await search(body);
+        setData(result);
+      } catch (err) {
+        console.error("Erro ao buscar dados:", err);
+      }
     }
   };
 
@@ -61,8 +82,7 @@ export default function App() {
         Object.entries(data).forEach(([table, { base, relations }]) => {
           const normRels = {};
           Object.entries(relations || {}).forEach(([relTable, fields]) => {
-            const relName = pascalize(relTable);
-            normRels[relName] = fields;
+            normRels[pascalize(relTable)] = fields;
           });
           normalized[table] = { base, relations: normRels };
         });
@@ -81,7 +101,9 @@ export default function App() {
       );
       const relatedFields = Object.entries(
         metadata[selectedTable].relations
-      ).flatMap(([relTable, cols]) => cols.map((col) => `${relTable}.${col}`));
+      ).flatMap(([relTable, cols]) =>
+        cols.map((col) => `${relTable}.${col}`)
+      );
 
       setFields([...baseFields, ...relatedFields]);
       setFilters([...baseFields, ...relatedFields]);
@@ -90,6 +112,21 @@ export default function App() {
       setFilters([]);
     }
   }, [selectedTable, metadata]);
+
+  // --- NOVO: lógica para exibir só 1 coluna na tabela quando em modo agregação
+  const aggFn      = columns.find((c) => measuresFields.includes(c));
+  const realCols   = columns.filter((c) => !measuresFields.includes(c));
+  let displayCols  = columns;
+  let aggFieldKey  = "";
+
+  if (aggFn && realCols.length === 1) {
+    // exibe apenas o header "FN(tablename.field)"
+    displayCols = [`${aggFn.toUpperCase()}(${realCols[0]})`];
+    // chave usada no row retornado pelo backend é "fn_fieldName"
+    const fieldName = realCols[0].split(".")[1];
+    aggFieldKey = `${aggFn.toLowerCase()}_${fieldName}`;
+  }
+  // ---------------------------------------------------------------
 
   return (
     <div>
@@ -114,7 +151,7 @@ export default function App() {
           </select>
 
           <div className="section-header">
-            <span>Funções</span>
+            <span>Agregações</span>
             <span>≡</span>
           </div>
           <ul className="field-list">
@@ -172,7 +209,7 @@ export default function App() {
           <table className="result-table">
             <thead>
               <tr>
-                {columns.map((column) => (
+                {displayCols.map((column) => (
                   <th key={column} className="column-header">
                     {column}
                   </th>
@@ -182,8 +219,12 @@ export default function App() {
             <tbody>
               {data.map((row, rowIndex) => (
                 <tr key={rowIndex}>
-                  {columns.map((column) => (
-                    <td key={column}>{row[column]}</td>
+                  {displayCols.map((col, idx) => (
+                    <td key={idx}>
+                      {aggFn
+                        ? row[aggFieldKey]
+                        : row[col]}
+                    </td>
                   ))}
                 </tr>
               ))}
