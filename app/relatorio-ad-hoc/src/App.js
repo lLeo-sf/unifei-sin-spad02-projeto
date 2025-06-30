@@ -7,13 +7,15 @@ import { getMetadata } from "./services/metadataService";
 import { search } from "./services/searchService";
 
 export default function App() {
-  const [metadata, setMetadata]         = useState({});
+  const [chartType, setChartType] = useState("bar");
+  const [chartData, setChartData] = useState(null);
+  const [metadata, setMetadata] = useState({});
   const [selectedTable, setSelectedTable] = useState("");
-  const [fields, setFields]             = useState([]);
-  const [filters, setFilters]           = useState([]);
-  const [columns, setColumns]           = useState([]);
-  const [grouping, setGrouping]         = useState([]);
-  const [data, setData]                 = useState([
+  const [fields, setFields] = useState([]);
+  const [filters, setFilters] = useState([]);
+  const [columns, setColumns] = useState([]);
+  const [grouping, setGrouping] = useState([]);
+  const [data, setData] = useState([
     { "Animals.name": "Mel" },
     { "Animals.name": "Luna" },
   ]);
@@ -44,9 +46,9 @@ export default function App() {
       }
       // monta só aggregations
       const body = {
-        table:        selectedTable,
-        filters:      payloadFilters,
-        grouping,     // mantém agrupamentos se houver
+        table: selectedTable,
+        filters: payloadFilters,
+        grouping, // mantém agrupamentos se houver
         aggregations: [{ function: fn.toLowerCase(), field: realCols[0] }],
       };
       try {
@@ -58,10 +60,10 @@ export default function App() {
     } else {
       // fluxo normal sem agregação
       const body = {
-        table:    selectedTable,
+        table: selectedTable,
         columns,
         grouping,
-        filters:  payloadFilters,
+        filters: payloadFilters,
       };
       try {
         const result = await search(body);
@@ -101,9 +103,7 @@ export default function App() {
       );
       const relatedFields = Object.entries(
         metadata[selectedTable].relations
-      ).flatMap(([relTable, cols]) =>
-        cols.map((col) => `${relTable}.${col}`)
-      );
+      ).flatMap(([relTable, cols]) => cols.map((col) => `${relTable}.${col}`));
 
       setFields([...baseFields, ...relatedFields]);
       setFilters([...baseFields, ...relatedFields]);
@@ -114,10 +114,10 @@ export default function App() {
   }, [selectedTable, metadata]);
 
   // --- NOVO: lógica para exibir só 1 coluna na tabela quando em modo agregação
-  const aggFn      = columns.find((c) => measuresFields.includes(c));
-  const realCols   = columns.filter((c) => !measuresFields.includes(c));
-  let displayCols  = columns;
-  let aggFieldKey  = "";
+  const aggFn = columns.find((c) => measuresFields.includes(c));
+  const realCols = columns.filter((c) => !measuresFields.includes(c));
+  let displayCols = columns;
+  let aggFieldKey = "";
 
   if (aggFn && realCols.length === 1) {
     // exibe apenas o header "FN(tablename.field)"
@@ -139,6 +139,7 @@ export default function App() {
           <div className="panel-title">Tabelas</div>
           <select
             id="tableSelector"
+            className="select"
             value={selectedTable}
             onChange={(e) => setSelectedTable(e.target.value)}
           >
@@ -183,28 +184,30 @@ export default function App() {
 
           <div className="report-title">Relatório Ad Hoc</div>
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "center",
-              marginBottom: "10px",
-            }}
-          >
-            <button
-              style={{
-                padding: "6px 12px",
-                backgroundColor: "#4b89dc",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
-              onClick={handleSearch}
+          <div className="actions">
+           
+
+            {/* se tiver select de tipo de gráfico */}
+            <select
+              className="select"
+              value={chartType}
+              onChange={(e) => setChartType(e.target.value)}
             >
+              <option value="bar">Barras</option>
+              <option value="line">Linha</option>
+              <option value="pie">Pizza</option>
+            </select>
+
+            {/* botão Plotar */}
+            <button className="btn" onClick={() => {}}>
+              📈 Plotar
+            </button>
+            <label> | </label>
+             <button className="btn" onClick={handleSearch}>
               🔍 Pesquisar
             </button>
           </div>
+
 
           <table className="result-table">
             <thead>
@@ -220,11 +223,7 @@ export default function App() {
               {data.map((row, rowIndex) => (
                 <tr key={rowIndex}>
                   {displayCols.map((col, idx) => (
-                    <td key={idx}>
-                      {aggFn
-                        ? row[aggFieldKey]
-                        : row[col]}
-                    </td>
+                    <td key={idx}>{aggFn ? row[aggFieldKey] : row[col]}</td>
                   ))}
                 </tr>
               ))}

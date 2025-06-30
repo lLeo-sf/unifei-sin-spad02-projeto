@@ -36,3 +36,37 @@
     transform: rotate(360deg);
   }
 }
+
+
+/* Container para os botões e select de gráfico */
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* Botões */
+.actions .btn {
+  padding: 6px 12px;
+  background-color: #4b89dc;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.actions .btn:hover {
+  background-color: #357ab8;
+}
+
+/* Selects (tabela e tipo de gráfico) */
+.actions .select {
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fafafa;
+  color: #333;
+  cursor: pointer;
+  white-space: nowrap;
+}
