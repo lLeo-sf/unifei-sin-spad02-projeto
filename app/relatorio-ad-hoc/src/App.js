@@ -5,6 +5,7 @@ import FilterSection from "./components/FilterSection";
 import "./index.css";
 import { getMetadata } from "./services/metadataService";
 import { search } from "./services/searchService";
+import { exportCsv } from "./services/exportService";
 
 import {
   BarChart,
@@ -34,7 +35,7 @@ export default function App() {
   const [filters, setFilters] = useState([]);
   const [columns, setColumns] = useState([]);
   const [grouping, setGrouping] = useState([]);
-  const [orderBy, setOrderBy] = useState([]);            // → campos para ordenar
+  const [orderBy, setOrderBy] = useState([]); // → campos para ordenar
   const [orderDirections, setOrderDirections] = useState({}); // → direções por campo
   const [data, setData] = useState([]);
 
@@ -82,7 +83,8 @@ export default function App() {
       ...(aggregations.length && { aggregations }),
       ...(grouping.length && { grouping }),
       ...(!aggregations.length && { columns }),
-      ...(aggregations.length && remainingCols.length && { columns: remainingCols }),
+      ...(aggregations.length &&
+        remainingCols.length && { columns: remainingCols }),
     };
 
     // 5) Adiciona ordenação se houver, usando direção escolhida
@@ -100,6 +102,65 @@ export default function App() {
     } catch (err) {
       console.error("Erro ao buscar dados:", err);
       alert("Erro na busca, verifique o console.");
+    }
+  };
+
+  // Função de exportar CSV
+  const handleExport = async () => {
+    if (!selectedTable) {
+      alert("Selecione antes uma tabela");
+      return;
+    }
+
+    // monta filtros preenchidos
+    const payloadFilters = filters.filter(
+      (f) => f.value !== undefined && f.value !== ""
+    );
+
+    // reaproveita lógica de agregações
+    const aggregations = [];
+    const usedCols = new Set();
+    for (let i = 0; i < columns.length; i++) {
+      const fn = columns[i];
+      if (measuresFields.includes(fn)) {
+        const col = columns[i + 1];
+        aggregations.push({ function: fn.toLowerCase(), field: col });
+        usedCols.add(fn);
+        usedCols.add(col);
+        i++;
+      }
+    }
+    const remainingCols = columns.filter((c) => !usedCols.has(c));
+
+    // monta body igual ao /search
+    const body = {
+      table: selectedTable,
+      ...(payloadFilters.length && { filters: payloadFilters }),
+      ...(aggregations.length && { aggregations }),
+      ...(!aggregations.length && { columns }),
+      ...(aggregations.length &&
+        remainingCols.length && { columns: remainingCols }),
+    };
+    if (orderBy.length) {
+      body.order_by = orderBy.map((col) => ({
+        column: col,
+        direction: orderDirections[col] || "asc",
+      }));
+    }
+
+    try {
+      const blob = await exportCsv(body);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "export.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Erro ao exportar CSV:", err);
+      alert("Falha na exportação, veja o console.");
     }
   };
 
@@ -207,9 +268,7 @@ export default function App() {
       );
       const relatedFields = Object.entries(
         metadata[selectedTable].relations
-      ).flatMap(([relTable, cols]) =>
-        cols.map((col) => `${relTable}.${col}`)
-      );
+      ).flatMap(([relTable, cols]) => cols.map((col) => `${relTable}.${col}`));
       setFields([...baseFields, ...relatedFields]);
       setFilters([...baseFields, ...relatedFields]);
     } else {
@@ -344,6 +403,10 @@ export default function App() {
             <button className="btn" onClick={handleSearch}>
               🔍 Pesquisar
             </button>
+            <label> | </label>
+            <button className="btn" onClick={handleExport}>
+              💾 Exportar CSV
+            </button>
           </div>
 
           <div className="status-bar">{data.length} registros encontrados</div>
@@ -387,7 +450,9 @@ export default function App() {
                       )}%`
                     }
                   />
-                  <Tooltip formatter={(value) => [value, chartData.yNames[0]]} />
+                  <Tooltip
+                    formatter={(value) => [value, chartData.yNames[0]]}
+                  />
                 </PieChart>
               ) : chartType === "bar" ? (
                 <BarChart
