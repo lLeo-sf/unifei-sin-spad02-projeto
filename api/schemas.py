@@ -10,12 +10,17 @@ class FilterItem(BaseModel):
     operator: Literal['=', '!=', '>', '>=', '<', '<=', 'in', 'not_in', 'like']
     value: Any
     
+class SortItem(BaseModel):
+    column: str
+    direction: Literal['asc', 'desc'] = 'asc'
+    
 class AdhocQueryRequest(BaseModel):
     table: str
     columns: Optional[List[str]] = None
     filters: Optional[List[FilterItem]] = None
     grouping: Optional[List[str]] = None
     aggregations: Optional[List[Aggregation]] = None
+    order_by: Optional[List[SortItem]] = None
 
 class AdhocQueryResponse(RootModel[List[Dict[str, Any]]]):
     pass

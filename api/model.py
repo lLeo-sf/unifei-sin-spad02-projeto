@@ -200,17 +200,15 @@ def get_column(model, column_name):
         raise ValueError(f"Column {column_name} not found in model {model.__name__}")
 
 
-from typing import Any, Dict, List
-from sqlalchemy import select, func
-from sqlalchemy.orm import Session
-
-
-def generate_dynamic_query(request_data: Dict[str, Any], db: Session) -> List[Dict[str, Any]]:
-    table_name   = request_data["table"]
-    columns      = request_data.get("columns", []) or []
-    grouping     = request_data.get("grouping", []) or []
-    aggs_list    = request_data.get("aggregations", []) or []
+def generate_dynamic_query(
+    request_data: Dict[str, Any], db: Session
+) -> List[Dict[str, Any]]:
+    table_name = request_data["table"]
+    columns = request_data.get("columns", []) or []
+    grouping = request_data.get("grouping", []) or []
+    aggs_list = request_data.get("aggregations", []) or []
     filters_dict = request_data.get("filters", {}) or {}
+    order_by_list = request_data.get("order_by", []) or []
 
     Model = TABLE_MODELS[table_name]
     select_expressions: List[Any] = []
@@ -219,17 +217,15 @@ def generate_dynamic_query(request_data: Dict[str, Any], db: Session) -> List[Di
     for col in columns:
         tbl, field = col.split(".", 1)
         cls = TABLE_MODELS[tbl]
-        select_expressions.append(
-            getattr(cls, field).label(col)        # <– usa col, ex: "Animals.agegroup"
-        )
+        select_expressions.append(getattr(cls, field).label(col))
 
     # 2) agregações (alias = função.nome_completo)
     for agg in aggs_list:
-        fn_name   = agg["function"]
-        full_field= agg["field"]                # ex: "Animals.id"
-        tbl, field= full_field.split(".", 1)
-        cls        = TABLE_MODELS[tbl]
-        fn         = getattr(func, fn_name)
+        fn_name = agg["function"]
+        full_field = agg["field"]
+        tbl, field = full_field.split(".", 1)
+        cls = TABLE_MODELS[tbl]
+        fn = getattr(func, fn_name)
         select_expressions.append(
             fn(getattr(cls, field)).label(f"{fn_name}.{full_field}")
         )
@@ -239,18 +235,39 @@ def generate_dynamic_query(request_data: Dict[str, Any], db: Session) -> List[Di
 
     # 4) JOINs para colunas relacionadas
     to_join = {
-        tbl for col in columns + grouping
+        tbl
+        for col in columns + grouping
         for tbl, _ in [col.split(".", 1)]
         if tbl != table_name
     }
     for tbl in to_join:
         stmt = stmt.join(TABLE_MODELS[tbl])
 
-    # 5) filtros (formato dict)
-    for col, vals in filters_dict.items():
-        tbl, field = col.split(".", 1)
-        cls = TABLE_MODELS[tbl]
-        stmt = stmt.where(getattr(cls, field).in_(vals))
+    # 5) filtros (lista de objetos { field, operator?, value })
+    filters_list = request_data.get("filters", []) or []
+    for filt in filters_list:
+        col       = filt["field"]                     # ex: "Animals.agegroup"
+        operator  = filt.get("operator", "eq")        # opcional, default eq
+        value     = filt["value"]
+        tbl, fld  = col.split(".", 1)
+        cls       = TABLE_MODELS[tbl]
+        col_expr  = getattr(cls, fld)
+
+        # aplica operador
+        if operator in ("in", "contains") and isinstance(value, (list, tuple)):
+            stmt = stmt.where(col_expr.in_(value))
+        elif operator in ("ne", "!="):
+            stmt = stmt.where(col_expr != value)
+        elif operator in ("lt", "<"):
+            stmt = stmt.where(col_expr < value)
+        elif operator in ("lte", "<="):
+            stmt = stmt.where(col_expr <= value)
+        elif operator in ("gt", ">"):
+            stmt = stmt.where(col_expr > value)
+        elif operator in ("gte", ">="):
+            stmt = stmt.where(col_expr >= value)
+        else:  # "eq" ou qualquer outro
+            stmt = stmt.where(col_expr == value)
 
     # 6) GROUP BY se necessário
     if grouping:
@@ -261,6 +278,20 @@ def generate_dynamic_query(request_data: Dict[str, Any], db: Session) -> List[Di
             group_exprs.append(getattr(cls, field))
         stmt = stmt.group_by(*group_exprs)
 
-    # 7) executa
+    # 7) ORDER BY se solicitado
+    if order_by_list:
+        order_exprs = []
+        for sort in order_by_list:
+            full_field = sort["column"]  # ex: "Animals.agegroup"
+            direction = sort.get("direction", "asc").lower()
+            tbl, field = full_field.split(".", 1)
+            cls = TABLE_MODELS[tbl]
+            col_expr = getattr(cls, field)
+            order_exprs.append(
+                col_expr.asc() if direction == "asc" else col_expr.desc()
+            )
+        stmt = stmt.order_by(*order_exprs)
+
+    # 8) executa
     result = db.execute(stmt).mappings().all()
     return [dict(row) for row in result]
