@@ -1,5 +1,5 @@
 from typing import Any, Dict, List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy import inspect
 from sqlalchemy.orm import Session
 from schemas import AdhocQueryRequest, AdhocQueryResponse
@@ -41,24 +41,31 @@ def metadata():
 
     return result
 
-@router.post("/search")
+@router.post(
+    "/search",
+    response_model=List[Dict[str, Any]],
+    summary="Executa consulta Ad Hoc e retorna lista de mapas dinâmicos"
+)
 def search(
-    request: AdhocQueryRequest, db: Session = Depends(get_db)
+    request_data: Dict[str, Any] = Body(...),
+    db: Session = Depends(get_db)
 ) -> List[Dict[str, Any]]:
-    raw_results = generate_dynamic_query(request, db)
+    raw = generate_dynamic_query(request_data, db)
 
-    # Define quais chaves vamos usar para renderizar:
-    # - se vierem apenas aggregations, usamos seus labels (<fn>_<campo>)
-    # - senão, usamos request.columns
-    if request.aggregations and not request.columns:
-        cols = [
-            f"{agg.function}_{agg.field.split('.')[-1]}" for agg in request.aggregations
-        ]
+    # monta cols usando exatamente os aliases que o SELECT produziu
+    if request_data.get("aggregations"):
+        cols: List[str] = []
+        # 1) todas as colunas de grouping (ex: "Animals.agegroup")
+        cols.extend(request_data.get("grouping", []))
+        # 2) cada função + campo, ex: "count.Animals.id"
+        cols.extend([
+            f"{agg['function']}.{agg['field']}"
+            for agg in request_data["aggregations"]
+        ])
     else:
-        cols = request.columns or []
+        cols = request_data.get("columns", [])
 
-    # Renderiza e devolve o resultado com chaves "Tabela.campo"
     try:
-        return render_adhoc_query_response(raw_results, cols)
+        return render_adhoc_query_response(raw, cols)
     except Exception as e:
-        raise HTTPException(500, detail=f"Erro ao renderizar resultados: {e}")
+        raise HTTPException(500, detail=str(e))

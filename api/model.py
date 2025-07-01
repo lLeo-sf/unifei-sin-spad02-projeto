@@ -205,85 +205,62 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 
-def generate_dynamic_query(
-    request: AdhocQueryRequest, db: Session
-) -> List[Dict[str, Any]]:
-    table_name = request.table
-    columns = request.columns or []
-    grouping = list(request.grouping or [])
-    filters = request.filters or {}
+def generate_dynamic_query(request_data: Dict[str, Any], db: Session) -> List[Dict[str, Any]]:
+    table_name   = request_data["table"]
+    columns      = request_data.get("columns", []) or []
+    grouping     = request_data.get("grouping", []) or []
+    aggs_list    = request_data.get("aggregations", []) or []
+    filters_dict = request_data.get("filters", {}) or {}
 
     Model = TABLE_MODELS[table_name]
-
-    # ignorar campos de agregação em grouping para evitar GROUP BY nelas
-    agg_fields = [agg.field for agg in (request.aggregations or [])]
-    grouping = [g for g in grouping if g not in agg_fields]
-
-    # montar lista de expressões para SELECT
     select_expressions: List[Any] = []
-    for col in columns:
-        tbl, field = col.split(".")
-        cls = TABLE_MODELS[tbl]
-        select_expressions.append(getattr(cls, field).label(field))
 
-    # adicionar agregações
-    for agg in request.aggregations or []:
-        tbl, field = agg.field.split(".")
+    # 1) colunas simples (usa o nome completo como alias)
+    for col in columns:
+        tbl, field = col.split(".", 1)
         cls = TABLE_MODELS[tbl]
-        fn = getattr(func, agg.function)
         select_expressions.append(
-            fn(getattr(cls, field)).label(f"{agg.function}_{field}")
+            getattr(cls, field).label(col)        # <– usa col, ex: "Animals.agegroup"
         )
 
-    # construir statement inicial
+    # 2) agregações (alias = função.nome_completo)
+    for agg in aggs_list:
+        fn_name   = agg["function"]
+        full_field= agg["field"]                # ex: "Animals.id"
+        tbl, field= full_field.split(".", 1)
+        cls        = TABLE_MODELS[tbl]
+        fn         = getattr(func, fn_name)
+        select_expressions.append(
+            fn(getattr(cls, field)).label(f"{fn_name}.{full_field}")
+        )
+
+    # 3) monta o SELECT
     stmt = select(*select_expressions).select_from(Model)
 
-    # aplicar JOINs sem duplicar
-    joined_tables = set()
-    for col in columns:
-        tbl, _ = col.split(".")
-        if tbl != table_name and tbl not in joined_tables:
-            stmt = stmt.join(TABLE_MODELS[tbl])
-            joined_tables.add(tbl)
+    # 4) JOINs para colunas relacionadas
+    to_join = {
+        tbl for col in columns + grouping
+        for tbl, _ in [col.split(".", 1)]
+        if tbl != table_name
+    }
+    for tbl in to_join:
+        stmt = stmt.join(TABLE_MODELS[tbl])
 
-    # filtros dinâmicos
-    for f in request.filters or []:
-        tbl, fld = f.field.split(".", 1)
+    # 5) filtros (formato dict)
+    for col, vals in filters_dict.items():
+        tbl, field = col.split(".", 1)
         cls = TABLE_MODELS[tbl]
-        col_attr = getattr(cls, fld)
-        op = f.operator
-        val = f.value
+        stmt = stmt.where(getattr(cls, field).in_(vals))
 
-        if op == "=":
-            stmt = stmt.where(col_attr == val)
-        elif op == "!=":
-            stmt = stmt.where(col_attr != val)
-        elif op == ">":
-            stmt = stmt.where(col_attr > val)
-        elif op == ">=":
-            stmt = stmt.where(col_attr >= val)
-        elif op == "<":
-            stmt = stmt.where(col_attr < val)
-        elif op == "<=":
-            stmt = stmt.where(col_attr <= val)
-        elif op == "in":
-            stmt = stmt.where(col_attr.in_(val))
-        elif op == "not_in":
-            stmt = stmt.where(~col_attr.in_(val))
-        elif op == "like":
-            stmt = stmt.where(col_attr.like(val))
-        else:
-            raise ValueError(f"Operador inválido: {op}")
-
-    # aplicar GROUP BY, se houver campos restantes
+    # 6) GROUP BY se necessário
     if grouping:
         group_exprs = []
         for grp in grouping:
-            tbl, field = grp.split(".")
+            tbl, field = grp.split(".", 1)
             cls = TABLE_MODELS[tbl]
             group_exprs.append(getattr(cls, field))
         stmt = stmt.group_by(*group_exprs)
 
-    # executar e retornar lista de dicts
+    # 7) executa
     result = db.execute(stmt).mappings().all()
     return [dict(row) for row in result]

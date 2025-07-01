@@ -3,7 +3,7 @@ from pydantic import RootModel
 from typing import List, Dict, Any, Literal, Optional
 
 class Aggregation(BaseModel):
-    function: Literal['avg', 'min', 'max']
+    function: Literal['avg', 'min', 'max', 'count']
     field: str
 class FilterItem(BaseModel):
     field: str
